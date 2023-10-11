@@ -33,7 +33,7 @@ def run_demo():
     )
     print(event_df)
     store.push("driver_stats_push_source", event_df, to=PushMode.ONLINE_AND_OFFLINE)
-    store.apply()
+    store.apply(objects[1001])
     fetch_online_features(store, source="push")
 
 if __name__ == '__main__':
