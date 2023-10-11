@@ -1,33 +1,53 @@
-from feast import FeatureView, ValueType
+import datetime
+import pandas as pd
+from feast import FeatureStore
+from feast.data_source import PushMode
 
-# Define the values of the features for each entity in the feature view.
-entity_rows = [
-    {"driver_id": 1004, "feature1": 0.5, "feature2": 10},
-    {"driver_id": 1005, "feature1": 0.7, "feature2": 15},
-]
 
-# Create the synthetic feature view.
-driver_feature_view = FeatureView(
-    name="driver_feature_view",
-    entities=["driver_entity"],
-    source=entity_rows,
-)
+def run_demo():
+  store = FeatureStore(repo_path=".")
 
-# Register the feature view with the feature store.
-store = FeatureStore(repo_path=".")
-store.register_feature_view(driver_feature_view)
+  # Apply the feature definitions.
+  store.apply()
 
-# Apply the feature view to the feature store.
-store.apply()
+  # Retrieve historical features for training.
+  fetch_historical_features_entity_df(store, for_batch_scoring=False)
 
-# Retrieve features from the feature view.
-feature_vector = store.get_online_features(
-    features=["feature1", "feature2"],
-    entity_rows=[
-        {"driver_id": 1004},
-        {"driver_id": 1005},
-    ],
-)
+  # Retrieve historical features for batch scoring.
+  fetch_historical_features_entity_df(store, for_batch_scoring=True)
 
-# Print the feature vector to the screen.
-print(feature_vector)
+  # Load features into online store.
+  store.materialize_incremental(end_date=datetime.now())
+
+  # Retrieve online features.
+  fetch_online_features(store)
+
+  # Retrieve online features through a feature service.
+  fetch_online_features(store, source="feature_service")
+
+  # Retrieve online features retrieved (using feature service v3, which uses a feature view with a push source)
+  fetch_online_features(store, source="push")
+
+  # Simulate a stream event ingestion of the hourly stats df.
+  event_df = pd.DataFrame.from_dict(
+    {
+      "driver_id": [1001],
+      "event_timestamp": [
+        datetime.now(),
+      ],
+      "created": [
+        datetime.now(),
+      ],
+      "conv_rate": [1.0],
+      "acc_rate": [1.0],
+      "avg_daily_trips": [1000],
+    }
+  )
+  print(event_df)
+  store.push("driver_stats_push_source", event_df, to=PushMode.ONLINE_AND_OFFLINE)
+
+  # Retrieve online features again with updated values from a stream push.
+  fetch_online_features(store, source="push")
+
+if __name__ == '__main__':
+    run_demo()
