@@ -5,7 +5,7 @@ from feast.data_source import PushMode
 
 
 def run_demo():
-  store = FeatureStore(repo_path=".")
+  store = FeatureStore(repo_path="/home/shweta/ramdas/feast/my_project/feature_repo")
   store.apply()
   fetch_historical_features_entity_df(store, for_batch_scoring=False)
   fetch_historical_features_entity_df(store, for_batch_scoring=True)
